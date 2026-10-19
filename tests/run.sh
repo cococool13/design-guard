@@ -109,12 +109,20 @@ expect_pass "INTERVAL_MS INTERNAL inter-process" "$fixtures/ok-font-case"
 expect_fail "quoted Inter and Inter comma" "$fixtures/bad-font-token" "file=src/fonts.ts,line=1::"
 expect_fail "geist/font/sans import" "$fixtures/bad-geist-import" "file=src/app.tsx,line=1::"
 run_guard "$fixtures/bad-geist-import"
-if grep -q 'file=src/app.tsx,line=2::' <<<"$out"; then
+if grep -F -q 'file=src/app.tsx,line=2::' <<<"$out"; then
   ok "geist/font/mono import"
 else
   bad "missing geist/font/mono" "$out"
 fi
+expect_fail "require geist/font/sans" "$fixtures/bad-geist-import" "file=src/require.js,line=1::"
+expect_fail "await import geist/font/mono" "$fixtures/bad-geist-import" "file=src/dynamic.ts,line=2::"
+expect_fail "minified geist import" "$fixtures/bad-geist-import" "file=src/min.js,line=1::"
 expect_fail "unquoted fontFamily Inter" "$fixtures/bad-font-family-js" "file=src/theme.ts,line=1::"
+expect_fail "quoted fontFamily key" "$fixtures/bad-font-family-js" "file=src/quoted.ts,line=1::"
+expect_fail "template fontFamily" "$fixtures/bad-font-family-js" "file=src/template.ts,line=1::"
+expect_fail "vue fontFamily" "$fixtures/bad-font-family-js" "file=App.vue,line=2::"
+expect_fail "svelte fontFamily" "$fixtures/bad-font-family-js" "file=Widget.svelte,line=2::"
+expect_fail "astro fontFamily" "$fixtures/bad-font-family-js" "file=page.astro,line=2::"
 expect_fail "InterDisplay" "$fixtures/bad-inter-display" "file=styles.css,line=1::"
 run_guard "$fixtures/bad-inter-display"
 if grep -q 'file=styles.css,line=2::' <<<"$out"; then
@@ -279,7 +287,7 @@ else
     'file=skills/' \
     'file=LICENSE,' \
     'file=license.txt,' \
-    'file=OFL.md,' \
+    'file=OFL.txt,' \
     'fonts/Face-OFL.txt' \
     '.pnp' \
     '.yarn/' \
@@ -320,10 +328,10 @@ else
   for absent in \
     'file=LICENSE,' \
     'file=license.txt,' \
-    'file=LICENCE.md,' \
+    'file=LICENCE,' \
     'file=COPYING,' \
     'file=NOTICE.txt,' \
-    'file=OFL.md,' \
+    'file=OFL.txt,' \
     'file=FFL,' \
     'file=FFL.txt,' \
     'file=fonts/Inter-OFL.txt,'

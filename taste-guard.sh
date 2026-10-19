@@ -71,52 +71,36 @@ RG_GLOBS=(
   --glob '!**/Pods/**'
   --glob '!**/LICENSE'
   --glob '!**/LICENSE.txt'
-  --glob '!**/LICENSE.md'
   --glob '!**/LICENCE'
   --glob '!**/LICENCE.txt'
-  --glob '!**/LICENCE.md'
   --glob '!**/license'
   --glob '!**/license.txt'
-  --glob '!**/license.md'
   --glob '!**/licence'
   --glob '!**/licence.txt'
-  --glob '!**/licence.md'
   --glob '!**/License'
   --glob '!**/License.txt'
-  --glob '!**/License.md'
   --glob '!**/Licence'
   --glob '!**/Licence.txt'
-  --glob '!**/Licence.md'
   --glob '!**/COPYING'
   --glob '!**/COPYING.txt'
-  --glob '!**/COPYING.md'
   --glob '!**/copying'
   --glob '!**/copying.txt'
-  --glob '!**/copying.md'
   --glob '!**/Copying'
   --glob '!**/Copying.txt'
-  --glob '!**/Copying.md'
   --glob '!**/NOTICE'
   --glob '!**/NOTICE.txt'
-  --glob '!**/NOTICE.md'
   --glob '!**/notice'
   --glob '!**/notice.txt'
-  --glob '!**/notice.md'
   --glob '!**/Notice'
   --glob '!**/Notice.txt'
-  --glob '!**/Notice.md'
   --glob '!**/OFL'
   --glob '!**/OFL.txt'
-  --glob '!**/OFL.md'
   --glob '!**/ofl'
   --glob '!**/ofl.txt'
-  --glob '!**/ofl.md'
   --glob '!**/FFL'
   --glob '!**/FFL.txt'
-  --glob '!**/FFL.md'
   --glob '!**/ffl'
   --glob '!**/ffl.txt'
-  --glob '!**/ffl.md'
   --glob '!**/[Ff]onts/**/*[Oo][Ff][Ll]*.txt'
   --glob '!**/package-lock.json'
   --glob '!**/npm-shrinkwrap.json'
@@ -356,16 +340,23 @@ MSG_MANIFEST='Inter/Geist in a package manifest is banned.'
 MSG_FONT='Inter/Geist is banned.'
 
 search "$MSG_PKG" "@fontsource(?:-variable)?/(?:inter|geist)(?:-mono)?"
-search "$MSG_PKG" "(?:from|import)[[:space:]]+['\"]geist(?:/[^'\"]*)?['\"]"
+# from/import/require, with or without a call paren or space:
+# import { x } from "geist/font/sans"
+# require("geist/font/sans")
+# await import("geist/font/mono")
+# import{x}from"geist/font"
+search "$MSG_PKG" "(?:\\bfrom|\\bimport|\\brequire)[[:space:]]*\\(?[[:space:]]*['\"]geist(?:/[^'\"]*)?['\"]"
 search "$MSG_URL" "fonts\\.(?:googleapis\\.com|bunny\\.net|gstatic\\.com)[^[:space:]'\"<>)]*(?:${FONT}|${SLUG})"
 search "$MSG_NEXT" "import[[:space:]]+(type[[:space:]]+)?\\{[^}]*(?:${FONT})[^}]*\\}[[:space:]]*from[[:space:]]*['\"]next/font/google['\"]"
 search "$MSG_NEXT" "\\b(?:Inter|Geist_Mono|Geist)[[:space:]]*\\("
 search "$MSG_FACE" "url[[:space:]]*\\([[:space:]]*['\"]?[^)'\"]*(?:${FONT}|${SLUG})|local[[:space:]]*\\([[:space:]]*['\"](?:${FONT})"
 search "$MSG_CSS" "(?:font-family[[:space:]]*:|(?:--|\\$)font[A-Za-z0-9_-]*[[:space:]]*:|(?:^|[^A-Za-z_-])font[[:space:]]*:)[[:space:]]*[^;}{]{0,400}?(?:${FONT})" \
   --glob '*.css' --glob '*.scss' --glob '*.sass' --glob '*.less' --glob '*.pcss' \
-  --glob '*.vue' --glob '*.svelte' --glob '*.html' --glob '*.htm'
-search "$MSG_CSS" "fontFamily[[:space:]]*:[[:space:]]*['\"]?(?:${FONT})" \
-  --glob '*.ts' --glob '*.tsx' --glob '*.js' --glob '*.jsx' --glob '*.mjs' --glob '*.cjs'
+  --glob '*.vue' --glob '*.svelte' --glob '*.astro' --glob '*.html' --glob '*.htm'
+# Unquoted, quoted key ("fontFamily"), or a template-literal value.
+search "$MSG_CSS" "['\"]?\\bfontFamily['\"]?[[:space:]]*:[[:space:]]*[\`'\"]?(?:${FONT})" \
+  --glob '*.ts' --glob '*.tsx' --glob '*.js' --glob '*.jsx' --glob '*.mjs' --glob '*.cjs' \
+  --glob '*.vue' --glob '*.svelte' --glob '*.astro'
 search "$MSG_TW" "font-\\[[[:space:]]*['\"]?(?:${FONT})|\\[font-family:[[:space:]]*['\"]?(?:${FONT})"
 search "$MSG_TW" "(?:${FONT})" --glob 'tailwind.config.*'
 search "$MSG_SWIFT" "\\.custom[[:space:]]*\\([[:space:]]*['\"](?:${FONT})" --glob '*.swift'
