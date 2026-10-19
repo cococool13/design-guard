@@ -33,6 +33,7 @@ jobs:
           fi
 
       - name: Checkout design-guard
+        id: design-guard
         uses: actions/checkout@v4
         with:
           # job.workflow_repository and job.workflow_sha are the called
@@ -52,15 +53,16 @@ jobs:
         run: bash .design-guard/taste-guard.sh
 
       - name: Set up Node
-        if: always() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        if: steps.design-guard.outcome == 'success' && !cancelled() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # Report only. Still runs when the taste check fails.
-      # Skipped when the vendored detector is absent.
+      # Report only. Runs when the design-guard checkout succeeded, including
+      # after a taste failure. Skipped when that checkout failed or the job
+      # was cancelled, and when the vendored detector is absent.
       # Findings are written to the job summary and do not fail the job.
       - name: Impeccable detector (report only)
-        if: always() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        if: steps.design-guard.outcome == 'success' && !cancelled() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
         continue-on-error: true
         run: node .design-guard/scripts/impeccable-report.mjs "$GITHUB_WORKSPACE"

@@ -38,9 +38,9 @@ The workflow fails with a clear error when the secret is missing.
 
 Hits are GitHub annotations: `::error file=path,line=N::`.
 
-Font names are case-sensitive and have to look like real use: `font-family`, an import, `@fontsource`, `next/font`, a quoted family (`"Inter"`, `'Inter'`), or a trailing comma (`Inter,`). `Interval`, `Interface`, `internal`, `INTERVAL_MS`, `INTERNAL_SERVER_ERROR`, and `inter-process` do not match. `InterVariable` and `GeistMono` do. Package names and font URLs also match the lowercase slugs `inter` and `geist`.
+Font names are case-sensitive and have to look like real use: `font-family`, `fontFamily:`, an import, `@fontsource`, `geist/...`, `next/font`, a quoted family (`"Inter"`, `'Inter'`, `"Inter Display"`), or a trailing comma (`Inter,`). `Interval`, `Interface`, `internal`, `INTERVAL_MS`, `INTERNAL_ERROR`, and `inter-process` do not match. `InterVariable`, `InterDisplay`, and `GeistMono` do. Package names and font URLs also match the lowercase slugs `inter` and `geist`.
 
-It skips `*.md` and `*.mdx`, lockfiles, `node_modules`, `vendor/`, `dist/`, `.next`, and the usual caches anywhere in the tree. `build/`, `out/`, `docs/`, and `skills/` are skipped only at the repo root. The same names under `src/` are scanned. It also skips `.pnp`, `.yarn`, `Pods`, license files (`LICENSE*`, `*FFL*`, `*license*.txt`, OFL), and agent folders (`.claude`, `.agents`, `.cursor`). Use `.taste-allow` to skip anything else.
+It skips `*.md` and `*.mdx`, lockfiles, `node_modules`, `vendor/`, `dist/`, `.next`, and the usual caches anywhere in the tree. `build/`, `out/`, `docs/`, and `skills/` are skipped only at the repo root. The same names under `src/` are scanned. It also skips `.pnp`, `.yarn`, `Pods`, and agent folders (`.claude`, `.agents`, `.cursor`). Licence files are skipped only when the basename is `LICENSE`, `LICENCE`, `COPYING`, `NOTICE`, `OFL`, or `FFL`, with an optional `.txt` or `.md`. A `*OFL*.txt` file under a `fonts/` directory is skipped too. `license.ts`, `shuffle.css`, and `raffle.tsx` are scanned. Use `.taste-allow` to skip anything else.
 
 Lint excerpts, if you want them in a repo, are in `configs/`:
 
@@ -63,7 +63,7 @@ Inside a repo that does run the check, put a `.taste-allow` file at the repo roo
 
 ## Impeccable
 
-After the taste check, the workflow runs the vendored detector in report-only mode. The step uses `if: always()`, so a taste failure still publishes the report. Findings go to the job summary. They do not fail the job. Do not install the detector as a user-level hook.
+After the taste check, the workflow runs the vendored detector in report-only mode when the design-guard checkout succeeded. A cancelled job or a failed checkout skips the report. A taste failure still publishes it. Findings go to the job summary. They do not fail the job. Do not install the detector as a user-level hook.
 
 The entry point is `vendor/impeccable-detector/detect-antipatterns.mjs` (`--json`). It scans the caller's source files and skips `vendor/`, `.design-guard`, and `node_modules`. `cli/main.mjs` imports `vendor/lib/impeccable-config.mjs` (Apache-2.0, same skill). The step uses `actions/setup-node` and does not install packages. Puppeteer is not used; URL scans are not run.
 

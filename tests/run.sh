@@ -107,6 +107,21 @@ expect_pass "clean project" "$fixtures/ok-clean"
 expect_pass "Interval Interface internal" "$fixtures/ok-false-positive"
 expect_pass "INTERVAL_MS INTERNAL inter-process" "$fixtures/ok-font-case"
 expect_fail "quoted Inter and Inter comma" "$fixtures/bad-font-token" "file=src/fonts.ts,line=1::"
+expect_fail "geist/font/sans import" "$fixtures/bad-geist-import" "file=src/app.tsx,line=1::"
+run_guard "$fixtures/bad-geist-import"
+if grep -q 'file=src/app.tsx,line=2::' <<<"$out"; then
+  ok "geist/font/mono import"
+else
+  bad "missing geist/font/mono" "$out"
+fi
+expect_fail "unquoted fontFamily Inter" "$fixtures/bad-font-family-js" "file=src/theme.ts,line=1::"
+expect_fail "InterDisplay" "$fixtures/bad-inter-display" "file=styles.css,line=1::"
+run_guard "$fixtures/bad-inter-display"
+if grep -q 'file=styles.css,line=2::' <<<"$out"; then
+  ok "Inter Display"
+else
+  bad "missing Inter Display" "$out"
+fi
 # 'Inter' and the Inter, import line are the other two true-positive forms.
 run_guard "$fixtures/bad-font-token"
 if grep -q "file=src/fonts.ts,line=2::" <<<"$out" && grep -q "file=src/fonts.ts,line=4::" <<<"$out"; then
@@ -249,7 +264,8 @@ else
     'file=src/docs/site.css,' \
     'file=src/skills/note.js,' \
     'file=src/ofLine.ts,' \
-    'file=src/app.tsx,'
+    'file=src/app.tsx,' \
+    'file=SIL-FFL.txt,'
   do
     if ! grep -q "$needle" <<<"$out"; then
       missing="${missing} ${needle}"
@@ -263,8 +279,8 @@ else
     'file=skills/' \
     'file=LICENSE,' \
     'file=license.txt,' \
-    'file=SIL-FFL.txt,' \
     'file=OFL.md,' \
+    'fonts/Face-OFL.txt' \
     '.pnp' \
     '.yarn/' \
     'Pods/'
@@ -279,6 +295,49 @@ else
     bad "nested skip should not mention:${extra}" "$out"
   else
     ok "top-level skips and license files"
+  fi
+fi
+
+# Ordinary names that merely contain "ffl" or "license" are scanned.
+# Real licence basenames, and *OFL*.txt under fonts/, are not.
+run_guard "$fixtures/bad-not-license"
+if [[ "$status" -ne 1 ]]; then
+  bad "not-license expected exit 1, got $status" "$out"
+else
+  missing=""
+  for needle in \
+    'file=shuffle.css,' \
+    'file=raffle.tsx,' \
+    'file=license.ts,' \
+    'file=notfonts/Inter-OFL.txt,' \
+    'file=SIL-FFL.txt,'
+  do
+    if ! grep -q "$needle" <<<"$out"; then
+      missing="${missing} ${needle}"
+    fi
+  done
+  extra=""
+  for absent in \
+    'file=LICENSE,' \
+    'file=license.txt,' \
+    'file=LICENCE.md,' \
+    'file=COPYING,' \
+    'file=NOTICE.txt,' \
+    'file=OFL.md,' \
+    'file=FFL,' \
+    'file=FFL.txt,' \
+    'file=fonts/Inter-OFL.txt,'
+  do
+    if grep -q "$absent" <<<"$out"; then
+      extra="${extra} ${absent}"
+    fi
+  done
+  if [[ -n "$missing" ]]; then
+    bad "not-license missed:${missing}" "$out"
+  elif [[ -n "$extra" ]]; then
+    bad "not-license skipped a real licence? no, it scanned:${extra}" "$out"
+  else
+    ok "licence basenames only"
   fi
 fi
 
@@ -301,8 +360,10 @@ if grep -F -q 'repository: ${{ job.workflow_repository }}' "$wf" \
   && grep -F -q 'required: true' "$wf" \
   && ! grep -F -q 'secrets.GITHUB_TOKEN' "$wf" \
   && grep -F -q 'DESIGN_GUARD_READ_TOKEN is missing' "$wf" \
-  && grep -F -q 'if: always() && hashFiles' "$wf"; then
-  ok "workflow checkout, token, and always()"
+  && grep -F -q 'id: design-guard' "$wf" \
+  && grep -F -q "steps.design-guard.outcome == 'success' && !cancelled()" "$wf" \
+  && ! grep -F -q 'if: always()' "$wf"; then
+  ok "workflow checkout, token, and report gate"
 else
   bad "workflow file drifted from the review fixes" "$(cat "$wf")"
 fi

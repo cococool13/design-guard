@@ -28,10 +28,12 @@ fi
 
 cd "$ROOT"
 
-# Case-sensitive family token. InterVariable, GeistMono, Geist_Mono, and "Geist Mono"
-# count. Word boundaries reject Interval, Internal, INTERVAL_MS, and inter-process.
+# Case-sensitive family token. InterVariable, InterDisplay, "Inter Display",
+# GeistMono, Geist_Mono, and "Geist Mono" count.
+# Word boundaries reject Interval, Internal, INTERNAL_ERROR, and inter-process.
 # Ripgrep's default engine has \b and does not have lookahead, so stay with \b.
-FONT='\b(?:Inter(?:Variable)?|Geist(?:_Mono|[ _]?Mono)?)\b'
+FONT_NAME='Inter(?:[ _]?Display|Variable)?|Geist(?:_Mono|[ _]?Mono)?'
+FONT="\\b(?:${FONT_NAME})\\b"
 # Lowercase package and file slugs. \b rejects internal and intercom.
 SLUG='\b(?:inter|geist)\b'
 LUCIDE='\b[Ll][Uu][Cc][Ii][Dd][Ee](?:[A-Z_]|\b)'
@@ -68,19 +70,54 @@ RG_GLOBS=(
   --glob '!**/.yarn/**'
   --glob '!**/Pods/**'
   --glob '!**/LICENSE'
-  --glob '!**/LICENSE.*'
+  --glob '!**/LICENSE.txt'
+  --glob '!**/LICENSE.md'
+  --glob '!**/LICENCE'
+  --glob '!**/LICENCE.txt'
+  --glob '!**/LICENCE.md'
   --glob '!**/license'
-  --glob '!**/license.*'
+  --glob '!**/license.txt'
+  --glob '!**/license.md'
+  --glob '!**/licence'
+  --glob '!**/licence.txt'
+  --glob '!**/licence.md'
   --glob '!**/License'
-  --glob '!**/License.*'
-  --glob '!**/*[Ff][Ff][Ll]*'
-  --glob '!**/*[Ll][Ii][Cc][Ee][Nn][Ss][Ee]*.txt'
-  --glob '!**/[Oo][Ff][Ll]'
-  --glob '!**/[Oo][Ff][Ll].*'
-  --glob '!**/*-[Oo][Ff][Ll]*'
-  --glob '!**/*_[Oo][Ff][Ll]*'
-  --glob '!**/*[Oo][Ff][Ll].txt'
-  --glob '!**/*[Oo][Ff][Ll].md'
+  --glob '!**/License.txt'
+  --glob '!**/License.md'
+  --glob '!**/Licence'
+  --glob '!**/Licence.txt'
+  --glob '!**/Licence.md'
+  --glob '!**/COPYING'
+  --glob '!**/COPYING.txt'
+  --glob '!**/COPYING.md'
+  --glob '!**/copying'
+  --glob '!**/copying.txt'
+  --glob '!**/copying.md'
+  --glob '!**/Copying'
+  --glob '!**/Copying.txt'
+  --glob '!**/Copying.md'
+  --glob '!**/NOTICE'
+  --glob '!**/NOTICE.txt'
+  --glob '!**/NOTICE.md'
+  --glob '!**/notice'
+  --glob '!**/notice.txt'
+  --glob '!**/notice.md'
+  --glob '!**/Notice'
+  --glob '!**/Notice.txt'
+  --glob '!**/Notice.md'
+  --glob '!**/OFL'
+  --glob '!**/OFL.txt'
+  --glob '!**/OFL.md'
+  --glob '!**/ofl'
+  --glob '!**/ofl.txt'
+  --glob '!**/ofl.md'
+  --glob '!**/FFL'
+  --glob '!**/FFL.txt'
+  --glob '!**/FFL.md'
+  --glob '!**/ffl'
+  --glob '!**/ffl.txt'
+  --glob '!**/ffl.md'
+  --glob '!**/[Ff]onts/**/*[Oo][Ff][Ll]*.txt'
   --glob '!**/package-lock.json'
   --glob '!**/npm-shrinkwrap.json'
   --glob '!**/yarn.lock'
@@ -293,10 +330,10 @@ check_font_files() {
       ttf|otf|woff|woff2|ttc|eot) ;;
       *) continue ;;
     esac
-    # Inter-Regular.woff2, InterVariable.woff2, GeistMono-Regular.ttf, inter.woff2 match.
+    # Inter-Regular.woff2, InterVariable.woff2, InterDisplay.woff2, GeistMono-Regular.ttf match.
     # Interface.ttf, Interval.otf, internal.woff2, and INTERVAL.woff2 do not.
     # POSIX ERE only (bash 3.2): no non-capturing groups.
-    if [[ "$base" =~ ^(Inter(Variable)?|Geist(Mono)?|inter|geist)([^a-z].*)?$ ]]; then
+    if [[ "$base" =~ ^(Inter(Variable|Display)?|Geist(Mono)?|inter|geist)([^a-z].*)?$ ]]; then
       key="${file}:1"
       if grep -Fxq "$key" "$SEEN"; then
         continue
@@ -319,6 +356,7 @@ MSG_MANIFEST='Inter/Geist in a package manifest is banned.'
 MSG_FONT='Inter/Geist is banned.'
 
 search "$MSG_PKG" "@fontsource(?:-variable)?/(?:inter|geist)(?:-mono)?"
+search "$MSG_PKG" "(?:from|import)[[:space:]]+['\"]geist(?:/[^'\"]*)?['\"]"
 search "$MSG_URL" "fonts\\.(?:googleapis\\.com|bunny\\.net|gstatic\\.com)[^[:space:]'\"<>)]*(?:${FONT}|${SLUG})"
 search "$MSG_NEXT" "import[[:space:]]+(type[[:space:]]+)?\\{[^}]*(?:${FONT})[^}]*\\}[[:space:]]*from[[:space:]]*['\"]next/font/google['\"]"
 search "$MSG_NEXT" "\\b(?:Inter|Geist_Mono|Geist)[[:space:]]*\\("
@@ -326,6 +364,8 @@ search "$MSG_FACE" "url[[:space:]]*\\([[:space:]]*['\"]?[^)'\"]*(?:${FONT}|${SLU
 search "$MSG_CSS" "(?:font-family[[:space:]]*:|(?:--|\\$)font[A-Za-z0-9_-]*[[:space:]]*:|(?:^|[^A-Za-z_-])font[[:space:]]*:)[[:space:]]*[^;}{]{0,400}?(?:${FONT})" \
   --glob '*.css' --glob '*.scss' --glob '*.sass' --glob '*.less' --glob '*.pcss' \
   --glob '*.vue' --glob '*.svelte' --glob '*.html' --glob '*.htm'
+search "$MSG_CSS" "fontFamily[[:space:]]*:[[:space:]]*['\"]?(?:${FONT})" \
+  --glob '*.ts' --glob '*.tsx' --glob '*.js' --glob '*.jsx' --glob '*.mjs' --glob '*.cjs'
 search "$MSG_TW" "font-\\[[[:space:]]*['\"]?(?:${FONT})|\\[font-family:[[:space:]]*['\"]?(?:${FONT})"
 search "$MSG_TW" "(?:${FONT})" --glob 'tailwind.config.*'
 search "$MSG_SWIFT" "\\.custom[[:space:]]*\\([[:space:]]*['\"](?:${FONT})" --glob '*.swift'
@@ -333,8 +373,9 @@ search "$MSG_LUCIDE" "$LUCIDE"
 search "$MSG_MANIFEST" "['\"](?:@fontsource(?:-variable)?/)?(?:inter|geist)(?:-mono)?['\"]" \
   --glob 'package.json' --glob '*.podspec'
 search "$MSG_MANIFEST" "(?:${FONT})" --glob 'package.json' --glob 'Package.swift' --glob '*.podspec'
-# Quoted family ("Inter", 'Geist') or a trailing comma (Inter,). Not a bare word.
-search "$MSG_FONT" "['\"](?:${FONT})\\b|(?:^|[^A-Za-z0-9_])(?:Inter(?:Variable)?|Geist(?:Mono)?),"
+# Quoted family ("Inter", 'Geist', "Inter Display") or a trailing comma (Inter,).
+# Not a bare word, and not INTERNAL_ERROR.
+search "$MSG_FONT" "['\"](?:${FONT})\\b|(?:^|[^A-Za-z0-9_])(?:${FONT_NAME}),"
 check_font_files
 
 if [[ "$FAIL" -ne 0 ]]; then
