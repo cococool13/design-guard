@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.7",
+    "@fontsource/newsreader": "^5.2.5"
+  }
+}

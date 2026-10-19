@@ -1,0 +1,7 @@
+{
+  "description": "internal interface for an interval",
+  "dependencies": {
+    "@fontsource/newsreader": "^5.2.5",
+    "@phosphor-icons/react": "^2.1.7"
+  }
+}

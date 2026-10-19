@@ -1,0 +1,68 @@
+# Reusable taste check. Callers use templates/taste.yml.
+# Do not install this workflow, or the Impeccable detector, as a user-level hook.
+name: guard
+
+on:
+  workflow_call:
+    secrets:
+      DESIGN_GUARD_READ_TOKEN:
+        required: true
+        description: >-
+          Fine-grained token with Contents: Read on cococool13/design-guard only.
+          The caller's GITHUB_TOKEN cannot read this private repository.
+          Actions access settings do not change that.
+
+permissions:
+  contents: read
+
+jobs:
+  taste:
+    name: taste
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout caller
+        uses: actions/checkout@v4
+
+      - name: Require design-guard read token
+        env:
+          DESIGN_GUARD_READ_TOKEN: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
+        run: |
+          if [[ -z "${DESIGN_GUARD_READ_TOKEN}" ]]; then
+            echo "::error::DESIGN_GUARD_READ_TOKEN is missing. Create a fine-grained token with Contents: Read on cococool13/design-guard only, store it as a secret on the caller, and pass it with secrets: inherit or secrets.DESIGN_GUARD_READ_TOKEN. The caller's GITHUB_TOKEN cannot read this private repository, and Actions access settings do not grant that. Callers pin @v1, and the v1 tag must exist."
+            exit 1
+          fi
+
+      - name: Checkout design-guard
+        id: design-guard
+        uses: actions/checkout@v4
+        with:
+          # job.workflow_repository and job.workflow_sha are the called
+          # workflow's repo and commit. github.workflow_sha is the caller's
+          # workflow file, so it checks out the wrong tree.
+          # https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#job-context
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .design-guard
+          token: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Taste guard
+        run: bash .design-guard/taste-guard.sh
+
+      - name: Set up Node
+        if: steps.design-guard.outcome == 'success' && !cancelled() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Report only. Runs when the design-guard checkout succeeded, including
+      # after a taste failure. Skipped when that checkout failed or the job
+      # was cancelled, and when the vendored detector is absent.
+      # Findings are written to the job summary and do not fail the job.
+      - name: Impeccable detector (report only)
+        if: steps.design-guard.outcome == 'success' && !cancelled() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        continue-on-error: true
+        run: node .design-guard/scripts/impeccable-report.mjs "$GITHUB_WORKSPACE"

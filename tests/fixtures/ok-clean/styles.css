@@ -1,0 +1,10 @@
+:root {
+  --font-sans: "Satoshi", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+body {
+  font-size: 16px;
+  font-weight: 500;
+  font-family: Switzer, Satoshi, sans-serif;
+}
+code { font-family: "IBM Plex Mono", ui-monospace, monospace; }

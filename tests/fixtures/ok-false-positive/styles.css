@@ -1,0 +1,9 @@
+.interval {
+  font-family: Switzer, sans-serif;
+  font-size: 16px;
+}
+:root { --font-ui: "Satoshi", sans-serif; }
+@font-face {
+  font-family: "Satoshi";
+  src: local("Internal"), url("/fonts/Interface.woff2"), url("/fonts/internal.woff2");
+}

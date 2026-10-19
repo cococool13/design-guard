@@ -1,0 +1,18 @@
+# Copy to .github/workflows/taste.yml
+#
+# design-guard is private. The caller's GITHUB_TOKEN cannot read it, and
+# Actions access settings do not change that. Create a fine-grained token
+# with Contents: Read on cococool13/design-guard only. Store it as
+# DESIGN_GUARD_READ_TOKEN. secrets: inherit passes that secret.
+#
+# Explicit form, if you do not want to inherit every secret:
+#   secrets:
+#     DESIGN_GUARD_READ_TOKEN: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
+#
+# The v1 tag must exist on cococool13/design-guard before this can run.
+name: taste
+on: [pull_request]
+jobs:
+  guard:
+    uses: cococool13/design-guard/.github/workflows/guard.yml@v1
+    secrets: inherit
