@@ -360,14 +360,14 @@ else
   bad "missing directory expected exit 2" "$out"
 fi
 
-# The reusable workflow must check out its own commit, require the read token,
+# The reusable workflow must check out its own commit, keep the read token optional,
 # and still publish the Impeccable report after a taste failure.
 wf=".github/workflows/guard.yml"
 if grep -F -q 'repository: ${{ job.workflow_repository }}' "$wf" \
   && grep -F -q 'ref: ${{ job.workflow_sha }}' "$wf" \
-  && grep -F -q 'required: true' "$wf" \
+  && grep -F -q 'required: false' "$wf" \
   && ! grep -F -q 'secrets.GITHUB_TOKEN' "$wf" \
-  && grep -F -q 'DESIGN_GUARD_READ_TOKEN is missing' "$wf" \
+  && grep -F -q 'token: ${{ secrets.DESIGN_GUARD_READ_TOKEN || github.token }}' "$wf" \
   && grep -F -q 'id: design-guard' "$wf" \
   && grep -F -q "steps.design-guard.outcome == 'success' && !cancelled()" "$wf" \
   && ! grep -F -q 'if: always()' "$wf"; then

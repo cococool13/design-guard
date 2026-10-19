@@ -6,11 +6,10 @@ on:
   workflow_call:
     secrets:
       DESIGN_GUARD_READ_TOKEN:
-        required: true
+        required: false
         description: >-
-          Fine-grained token with Contents: Read on cococool13/design-guard only.
-          The caller's GITHUB_TOKEN cannot read this private repository.
-          Actions access settings do not change that.
+          Optional. design-guard is public, so the caller's github.token can
+          read it. Set this only to override the token used for that checkout.
 
 permissions:
   contents: read
@@ -23,15 +22,6 @@ jobs:
       - name: Checkout caller
         uses: actions/checkout@v4
 
-      - name: Require design-guard read token
-        env:
-          DESIGN_GUARD_READ_TOKEN: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
-        run: |
-          if [[ -z "${DESIGN_GUARD_READ_TOKEN}" ]]; then
-            echo "::error::DESIGN_GUARD_READ_TOKEN is missing. Create a fine-grained token with Contents: Read on cococool13/design-guard only, store it as a secret on the caller, and pass it with secrets: inherit or secrets.DESIGN_GUARD_READ_TOKEN. The caller's GITHUB_TOKEN cannot read this private repository, and Actions access settings do not grant that. Callers pin @v1, and the v1 tag must exist."
-            exit 1
-          fi
-
       - name: Checkout design-guard
         id: design-guard
         uses: actions/checkout@v4
@@ -43,7 +33,7 @@ jobs:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .design-guard
-          token: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
+          token: ${{ secrets.DESIGN_GUARD_READ_TOKEN || github.token }}
           persist-credentials: false
 
       - name: Install ripgrep

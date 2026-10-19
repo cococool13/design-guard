@@ -13,18 +13,9 @@ uses: cococool13/design-guard/.github/workflows/guard.yml@v1
 secrets: inherit
 ```
 
-The `v1` tag must exist on this repo before a caller can pin `@v1`. This pull request does not create that tag.
+Callers pin `@v1`.
 
-This repo is private. `actions/checkout` cannot use the caller's `GITHUB_TOKEN` to read it. The Actions access setting (Accessible from repositories owned by cococool13) does not grant that either. It only lets other repos call the workflow.
-
-Create a fine-grained token with **Contents: Read** on `cococool13/design-guard` only. Store it on the caller as `DESIGN_GUARD_READ_TOKEN`. The template passes it with `secrets: inherit`. You can pass it explicitly instead:
-
-```yaml
-secrets:
-  DESIGN_GUARD_READ_TOKEN: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
-```
-
-The workflow fails with a clear error when the secret is missing.
+This repo is public, so callers need no token. The workflow checks out its own code with the caller's `github.token`. `secrets: inherit` is harmless and can stay. `DESIGN_GUARD_READ_TOKEN` is optional: if a caller sets it, the workflow uses it for that checkout instead.
 
 ## What it scans
 
@@ -53,8 +44,6 @@ Those files name the banned packages, so add them to `.taste-allow` if you commi
 ## Exceptions
 
 Do not add this workflow to **jcc-*** client repos. Those brands are exempt.
-
-**TBP** (`tbp-website`) is exempt until Cohen decides whether Inter is its brand font.
 
 Inside a repo that does run the check, put a `.taste-allow` file at the repo root. See `.taste-allow.example`.
 

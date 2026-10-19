@@ -9,10 +9,8 @@ if (IS_BROWSER) {
   const EXTENSION_MODE = (_myScript && _myScript.dataset.impeccableExtension === 'true')
     || document.documentElement.dataset.impeccableExtension === 'true';
 
-  // Kinpaku gold — pinned to the site's brand token (see
-  // site/styles/kinpaku-tokens.css --ks-kinpaku). Keep this in sync with
-  // the picker's C.brand in skill/scripts/live-browser.js and the kit's
-  // picker section in site/styles/kinpaku-kit.css.
+  // Brand gold. Keep this in sync with the picker's C.brand in
+  // skill/scripts/live-browser.js.
   //
   // One color across both light and dark host pages. The outline is a
   // 2px gesture pointing at an element + a labeled tag — it's a marker,
