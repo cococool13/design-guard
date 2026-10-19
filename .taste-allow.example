@@ -1,0 +1,14 @@
+# Copy to .taste-allow at the repo root.
+# Blank lines and # comments are ignored.
+# Other lines are gitignore globs. Matching paths are not scanned.
+# A leading ! puts a path back (same as gitignore).
+# pattern: lines are ripgrep regexes. A hit on a matching line is skipped.
+
+# brand/**
+
+# pattern: \bInter\b
+
+# Lint excerpts name the banned libraries. Ignore those files if you commit them.
+# eslint.config.js
+# .stylelintrc.json
+# .swiftlint.yml

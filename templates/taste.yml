@@ -1,0 +1,8 @@
+# Copy to .github/workflows/taste.yml
+# This repo is private. Keep secrets: inherit, or open design-guard Actions access to other cococool13 repos.
+name: taste
+on: [pull_request]
+jobs:
+  guard:
+    uses: cococool13/design-guard/.github/workflows/guard.yml@v1
+    secrets: inherit

@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "declaration-property-value-disallowed-list": {
+      "font-family": ["/\\bInter\\b/", "/\\bGeist\\b/"],
+      "font": ["/\\bInter\\b/", "/\\bGeist\\b/"]
+    }
+  }
+}

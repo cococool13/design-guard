@@ -1,0 +1,5 @@
+# Client brand folder.
+brand/**
+
+# Icon name kept in one legacy module.
+pattern: lucide

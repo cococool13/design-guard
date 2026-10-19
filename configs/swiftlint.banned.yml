@@ -1,0 +1,5 @@
+custom_rules:
+  banned_fonts:
+    regex: '\.custom\("(Inter|Geist)'
+    message: "Use SF Pro / SF Mono (Font.system)."
+    severity: error
