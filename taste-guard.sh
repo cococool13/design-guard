@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # taste-guard.sh — fail CI when shipped code uses Lucide, Inter, or Geist.
-# Docs, lockfiles, build output, OFL texts, and agent folders are skipped.
+# Lockfiles, dependency folders, license texts, and agent folders are skipped.
+# build/, out/, docs/, and skills/ are skipped only at the repo root.
 # Per-repo exceptions: .taste-allow (gitignore globs, plus "pattern:" regex lines).
 set -euo pipefail
 
@@ -27,9 +28,12 @@ fi
 
 cd "$ROOT"
 
-# Inter/Geist as a whole word, or CamelCase (InterVariable, GeistMono, Geist_Mono).
-# A lowercase letter after the name (Interval, Interface, internal) does not match.
-FONT='\b[Ii][Nn][Tt][Ee][Rr](?:[A-Z_]|\b)|\b[Gg][Ee][Ii][Ss][Tt](?:[A-Z_]|\b)'
+# Case-sensitive family token. InterVariable, GeistMono, Geist_Mono, and "Geist Mono"
+# count. Word boundaries reject Interval, Internal, INTERVAL_MS, and inter-process.
+# Ripgrep's default engine has \b and does not have lookahead, so stay with \b.
+FONT='\b(?:Inter(?:Variable)?|Geist(?:_Mono|[ _]?Mono)?)\b'
+# Lowercase package and file slugs. \b rejects internal and intercom.
+SLUG='\b(?:inter|geist)\b'
 LUCIDE='\b[Ll][Uu][Cc][Ii][Dd][Ee](?:[A-Z_]|\b)'
 
 SEEN=$(mktemp)
@@ -41,12 +45,12 @@ RG_GLOBS=(
   --glob '!.git/**'
   --glob '!**/*.md'
   --glob '!**/*.mdx'
-  --glob '!**/docs/**'
+  --glob '!/docs/**'
   --glob '!**/node_modules/**'
   --glob '!**/dist/**'
-  --glob '!**/build/**'
+  --glob '!/build/**'
   --glob '!**/.next/**'
-  --glob '!**/out/**'
+  --glob '!/out/**'
   --glob '!**/.output/**'
   --glob '!**/.nuxt/**'
   --glob '!**/.svelte-kit/**'
@@ -58,7 +62,25 @@ RG_GLOBS=(
   --glob '!**/DerivedData/**'
   --glob '!**/.vercel/**'
   --glob '!**/storybook-static/**'
-  --glob '!**/*[Oo][Ff][Ll]*.txt'
+  --glob '!**/.pnp'
+  --glob '!**/.pnp.*'
+  --glob '!**/.pnp/**'
+  --glob '!**/.yarn/**'
+  --glob '!**/Pods/**'
+  --glob '!**/LICENSE'
+  --glob '!**/LICENSE.*'
+  --glob '!**/license'
+  --glob '!**/license.*'
+  --glob '!**/License'
+  --glob '!**/License.*'
+  --glob '!**/*[Ff][Ff][Ll]*'
+  --glob '!**/*[Ll][Ii][Cc][Ee][Nn][Ss][Ee]*.txt'
+  --glob '!**/[Oo][Ff][Ll]'
+  --glob '!**/[Oo][Ff][Ll].*'
+  --glob '!**/*-[Oo][Ff][Ll]*'
+  --glob '!**/*_[Oo][Ff][Ll]*'
+  --glob '!**/*[Oo][Ff][Ll].txt'
+  --glob '!**/*[Oo][Ff][Ll].md'
   --glob '!**/package-lock.json'
   --glob '!**/npm-shrinkwrap.json'
   --glob '!**/yarn.lock'
@@ -78,7 +100,7 @@ RG_GLOBS=(
   --glob '!**/.claude/**'
   --glob '!**/.agents/**'
   --glob '!**/.cursor/**'
-  --glob '!**/skills/**'
+  --glob '!/skills/**'
   --glob '!**/vendor/**'
   --glob '!**/.design-guard/**'
   --glob '!**/.taste-allow'
@@ -99,7 +121,12 @@ trim() {
 # Gitignore glob → POSIX ERE. Anchored patterns stay at the scan root.
 glob_to_ere() {
   local pat="$1"
-  local dir_only=0 anchored=0 regex="" c
+  local dir_only=0 anchored=0 no_slash=0 regex="" c
+  # A name with no slash matches that file or directory anywhere.
+  # Matching a directory also matches everything under it (gitignore).
+  if [[ "$pat" != */* ]]; then
+    no_slash=1
+  fi
   if [[ "$pat" == */ ]]; then
     dir_only=1
     pat="${pat%/}"
@@ -144,7 +171,7 @@ glob_to_ere() {
   else
     regex="^(.*/)?${regex}"
   fi
-  if [[ $dir_only -eq 1 ]]; then
+  if [[ $dir_only -eq 1 || $no_slash -eq 1 ]]; then
     regex="${regex}(/.*)?"
   fi
   printf '%s$' "$regex"
@@ -266,9 +293,10 @@ check_font_files() {
       ttf|otf|woff|woff2|ttc|eot) ;;
       *) continue ;;
     esac
-    # InterVariable.woff2 and GeistMono-Regular.otf match.
-    # Interface.ttf, Interval.otf, and internal.woff2 do not.
-    if [[ "$base" =~ ^([Ii][Nn][Tt][Ee][Rr]|[Gg][Ee][Ii][Ss][Tt])([^a-z].*)?$ ]]; then
+    # Inter-Regular.woff2, InterVariable.woff2, GeistMono-Regular.ttf, inter.woff2 match.
+    # Interface.ttf, Interval.otf, internal.woff2, and INTERVAL.woff2 do not.
+    # POSIX ERE only (bash 3.2): no non-capturing groups.
+    if [[ "$base" =~ ^(Inter(Variable)?|Geist(Mono)?|inter|geist)([^a-z].*)?$ ]]; then
       key="${file}:1"
       if grep -Fxq "$key" "$SEEN"; then
         continue
@@ -290,11 +318,11 @@ MSG_SWIFT='Inter/Geist in SwiftUI is banned. Use SF Pro or SF Mono.'
 MSG_MANIFEST='Inter/Geist in a package manifest is banned.'
 MSG_FONT='Inter/Geist is banned.'
 
-search "$MSG_PKG" "@fontsource(?:-variable)?/(?:${FONT})"
-search "$MSG_URL" "fonts\\.(?:googleapis\\.com|bunny\\.net|gstatic\\.com)[^[:space:]'\"<>)]*(?:${FONT})"
+search "$MSG_PKG" "@fontsource(?:-variable)?/(?:inter|geist)(?:-mono)?"
+search "$MSG_URL" "fonts\\.(?:googleapis\\.com|bunny\\.net|gstatic\\.com)[^[:space:]'\"<>)]*(?:${FONT}|${SLUG})"
 search "$MSG_NEXT" "import[[:space:]]+(type[[:space:]]+)?\\{[^}]*(?:${FONT})[^}]*\\}[[:space:]]*from[[:space:]]*['\"]next/font/google['\"]"
-search "$MSG_NEXT" "\\b[Ii][Nn][Tt][Ee][Rr][[:space:]]*\\(|\\b[Gg][Ee][Ii][Ss][Tt](?:_?[Mm]ono)?[[:space:]]*\\("
-search "$MSG_FACE" "url[[:space:]]*\\([[:space:]]*['\"]?[^)'\"]*(?:${FONT})|local[[:space:]]*\\([[:space:]]*['\"](?:${FONT})"
+search "$MSG_NEXT" "\\b(?:Inter|Geist_Mono|Geist)[[:space:]]*\\("
+search "$MSG_FACE" "url[[:space:]]*\\([[:space:]]*['\"]?[^)'\"]*(?:${FONT}|${SLUG})|local[[:space:]]*\\([[:space:]]*['\"](?:${FONT})"
 search "$MSG_CSS" "(?:font-family[[:space:]]*:|(?:--|\\$)font[A-Za-z0-9_-]*[[:space:]]*:|(?:^|[^A-Za-z_-])font[[:space:]]*:)[[:space:]]*[^;}{]{0,400}?(?:${FONT})" \
   --glob '*.css' --glob '*.scss' --glob '*.sass' --glob '*.less' --glob '*.pcss' \
   --glob '*.vue' --glob '*.svelte' --glob '*.html' --glob '*.htm'
@@ -302,8 +330,11 @@ search "$MSG_TW" "font-\\[[[:space:]]*['\"]?(?:${FONT})|\\[font-family:[[:space:
 search "$MSG_TW" "(?:${FONT})" --glob 'tailwind.config.*'
 search "$MSG_SWIFT" "\\.custom[[:space:]]*\\([[:space:]]*['\"](?:${FONT})" --glob '*.swift'
 search "$MSG_LUCIDE" "$LUCIDE"
+search "$MSG_MANIFEST" "['\"](?:@fontsource(?:-variable)?/)?(?:inter|geist)(?:-mono)?['\"]" \
+  --glob 'package.json' --glob '*.podspec'
 search "$MSG_MANIFEST" "(?:${FONT})" --glob 'package.json' --glob 'Package.swift' --glob '*.podspec'
-search "$MSG_FONT" "(?:${FONT})"
+# Quoted family ("Inter", 'Geist') or a trailing comma (Inter,). Not a bare word.
+search "$MSG_FONT" "['\"](?:${FONT})\\b|(?:^|[^A-Za-z0-9_])(?:Inter(?:Variable)?|Geist(?:Mono)?),"
 check_font_files
 
 if [[ "$FAIL" -ne 0 ]]; then

@@ -5,8 +5,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 guard="$(pwd)/taste-guard.sh"
 fixtures="$(pwd)/tests/fixtures"
+# Use the bash that launched this script, so a 3.2 run tests the guard on 3.2.
+shell="${BASH:-bash}"
 
-bash -n "$guard"
+"$shell" -n "$guard"
 chmod +x "$guard"
 
 pass=0
@@ -28,7 +30,7 @@ bad() {
 run_guard() {
   local dir="$1"
   set +e
-  out=$(bash "$guard" "$dir" 2>&1)
+  out=$("$shell" "$guard" "$dir" 2>&1)
   status=$?
   set -e
 }
@@ -103,6 +105,15 @@ expect_fail "font file InterVariable" "$fixtures/bad-font-camel" "InterVariable.
 
 expect_pass "clean project" "$fixtures/ok-clean"
 expect_pass "Interval Interface internal" "$fixtures/ok-false-positive"
+expect_pass "INTERVAL_MS INTERNAL inter-process" "$fixtures/ok-font-case"
+expect_fail "quoted Inter and Inter comma" "$fixtures/bad-font-token" "file=src/fonts.ts,line=1::"
+# 'Inter' and the Inter, import line are the other two true-positive forms.
+run_guard "$fixtures/bad-font-token"
+if grep -q "file=src/fonts.ts,line=2::" <<<"$out" && grep -q "file=src/fonts.ts,line=4::" <<<"$out"; then
+  ok "single-quoted Inter and Inter comma"
+else
+  bad "missing 'Inter' or Inter, hit" "$out"
+fi
 expect_pass "docs" "$fixtures/ok-docs"
 expect_pass "ignored paths" "$fixtures/ok-ignored"
 expect_pass "taste-allow glob and pattern" "$fixtures/ok-allow"
@@ -126,7 +137,7 @@ badpat=$(mktemp -d)
 printf 'pattern: (\n' > "$badpat/.taste-allow"
 printf 'ok\n' > "$badpat/a.txt"
 set +e
-out=$(bash "$guard" "$badpat" 2>&1)
+out=$("$shell" "$guard" "$badpat" 2>&1)
 status=$?
 set -e
 rm -rf "$badpat"
@@ -147,7 +158,7 @@ expect_fail "vendor ignore still scans source" "$vend" "src/bad.css" "vendor/"
 rm -rf "$vend"
 
 set +e
-out=$(bash "$guard" . 2>&1)
+out=$("$shell" "$guard" . 2>&1)
 status=$?
 set -e
 if grep -q 'vendor/impeccable-detector' <<<"$out"; then
@@ -203,15 +214,97 @@ else
 fi
 rm -rf "$repo" "$summary"
 
+# A bare allow entry matches that directory name anywhere, not a longer name.
+bare=$(mktemp -d)
+mkdir -p "$bare/brand" "$bare/src/brand" "$bare/branding" "$bare/src"
+printf 'brand\n' > "$bare/.taste-allow"
+printf 'body { font-family: "Inter", sans-serif; }\n' > "$bare/brand/tokens.css"
+printf 'body { font-family: "Inter", sans-serif; }\n' > "$bare/src/brand/x.css"
+printf 'body { font-family: "Inter", sans-serif; }\n' > "$bare/branding/x.css"
+printf 'body { font-family: "Inter", sans-serif; }\n' > "$bare/src/app.css"
+run_guard "$bare"
+if [[ "$status" -ne 1 ]]; then
+  bad "bare brand allow expected exit 1, got $status" "$out"
+elif ! grep -q 'file=src/app.css,' <<<"$out"; then
+  bad "bare brand allow missed src/app.css" "$out"
+elif ! grep -q 'file=branding/x.css,' <<<"$out"; then
+  bad "bare brand allow skipped branding/" "$out"
+elif grep -q 'file=brand/' <<<"$out" || grep -q 'file=src/brand/' <<<"$out"; then
+  bad "bare brand allow scanned a brand directory" "$out"
+else
+  ok "bare brand allow matches the directory"
+fi
+rm -rf "$bare"
+
+# Top-level build/out/docs/skills, license files, .pnp, .yarn, and Pods are
+# skipped. The same names under src/ are not.
+run_guard "$fixtures/bad-nested-skip"
+if [[ "$status" -ne 1 ]]; then
+  bad "nested skip expected exit 1, got $status" "$out"
+else
+  missing=""
+  for needle in \
+    'file=src/build/app.css,' \
+    'file=src/out/app.css,' \
+    'file=src/docs/site.css,' \
+    'file=src/skills/note.js,' \
+    'file=src/ofLine.ts,' \
+    'file=src/app.tsx,'
+  do
+    if ! grep -q "$needle" <<<"$out"; then
+      missing="${missing} ${needle}"
+    fi
+  done
+  extra=""
+  for absent in \
+    'file=build/' \
+    'file=out/' \
+    'file=docs/' \
+    'file=skills/' \
+    'file=LICENSE,' \
+    'file=license.txt,' \
+    'file=SIL-FFL.txt,' \
+    'file=OFL.md,' \
+    '.pnp' \
+    '.yarn/' \
+    'Pods/'
+  do
+    if grep -q "$absent" <<<"$out"; then
+      extra="${extra} ${absent}"
+    fi
+  done
+  if [[ -n "$missing" ]]; then
+    bad "nested skip missed:${missing}" "$out"
+  elif [[ -n "$extra" ]]; then
+    bad "nested skip should not mention:${extra}" "$out"
+  else
+    ok "top-level skips and license files"
+  fi
+fi
+
 # Missing directory is a tool error, not a taste failure.
 set +e
-out=$(bash "$guard" "$fixtures/does-not-exist" 2>&1)
+out=$("$shell" "$guard" "$fixtures/does-not-exist" 2>&1)
 status=$?
 set -e
 if [[ "$status" -eq 2 ]] && grep -q 'not a directory' <<<"$out"; then
   ok "missing directory"
 else
   bad "missing directory expected exit 2" "$out"
+fi
+
+# The reusable workflow must check out its own commit, require the read token,
+# and still publish the Impeccable report after a taste failure.
+wf=".github/workflows/guard.yml"
+if grep -F -q 'repository: ${{ job.workflow_repository }}' "$wf" \
+  && grep -F -q 'ref: ${{ job.workflow_sha }}' "$wf" \
+  && grep -F -q 'required: true' "$wf" \
+  && ! grep -F -q 'secrets.GITHUB_TOKEN' "$wf" \
+  && grep -F -q 'DESIGN_GUARD_READ_TOKEN is missing' "$wf" \
+  && grep -F -q 'if: always() && hashFiles' "$wf"; then
+  ok "workflow checkout, token, and always()"
+else
+  bad "workflow file drifted from the review fixes" "$(cat "$wf")"
 fi
 
 printf '\n%s passed, %s failed\n' "$pass" "$fail"

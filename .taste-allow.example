@@ -1,6 +1,8 @@
 # Copy to .taste-allow at the repo root.
 # Blank lines and # comments are ignored.
 # Other lines are gitignore globs. Matching paths are not scanned.
+# A name with no slash matches that file or directory anywhere.
+# If it matches a directory, everything under it is skipped.
 # A leading ! puts a path back (same as gitignore).
 # pattern: lines are ripgrep regexes. A hit on a matching line is skipped.
 

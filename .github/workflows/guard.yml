@@ -6,11 +6,11 @@ on:
   workflow_call:
     secrets:
       DESIGN_GUARD_READ_TOKEN:
-        required: false
+        required: true
         description: >-
-          Optional token that can read cococool13/design-guard.
-          Needed only when this repo's Actions access is not already
-          open to other cococool13 repositories.
+          Fine-grained token with Contents: Read on cococool13/design-guard only.
+          The caller's GITHUB_TOKEN cannot read this private repository.
+          Actions access settings do not change that.
 
 permissions:
   contents: read
@@ -23,14 +23,26 @@ jobs:
       - name: Checkout caller
         uses: actions/checkout@v4
 
+      - name: Require design-guard read token
+        env:
+          DESIGN_GUARD_READ_TOKEN: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
+        run: |
+          if [[ -z "${DESIGN_GUARD_READ_TOKEN}" ]]; then
+            echo "::error::DESIGN_GUARD_READ_TOKEN is missing. Create a fine-grained token with Contents: Read on cococool13/design-guard only, store it as a secret on the caller, and pass it with secrets: inherit or secrets.DESIGN_GUARD_READ_TOKEN. The caller's GITHUB_TOKEN cannot read this private repository, and Actions access settings do not grant that. Callers pin @v1, and the v1 tag must exist."
+            exit 1
+          fi
+
       - name: Checkout design-guard
         uses: actions/checkout@v4
         with:
-          repository: cococool13/design-guard
-          # Same commit as this workflow file (the @v1 tag, or whatever ref called it).
-          ref: ${{ github.workflow_sha }}
+          # job.workflow_repository and job.workflow_sha are the called
+          # workflow's repo and commit. github.workflow_sha is the caller's
+          # workflow file, so it checks out the wrong tree.
+          # https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#job-context
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .design-guard
-          token: ${{ secrets.DESIGN_GUARD_READ_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.DESIGN_GUARD_READ_TOKEN }}
           persist-credentials: false
 
       - name: Install ripgrep
@@ -40,14 +52,15 @@ jobs:
         run: bash .design-guard/taste-guard.sh
 
       - name: Set up Node
-        if: hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        if: always() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # Report only. Skipped when the vendored detector is absent.
+      # Report only. Still runs when the taste check fails.
+      # Skipped when the vendored detector is absent.
       # Findings are written to the job summary and do not fail the job.
       - name: Impeccable detector (report only)
-        if: hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        if: always() && hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
         continue-on-error: true
         run: node .design-guard/scripts/impeccable-report.mjs "$GITHUB_WORKSPACE"
