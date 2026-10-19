@@ -79,6 +79,7 @@ RG_GLOBS=(
   --glob '!**/.agents/**'
   --glob '!**/.cursor/**'
   --glob '!**/skills/**'
+  --glob '!**/vendor/**'
   --glob '!**/.design-guard/**'
   --glob '!**/.taste-allow'
   --glob '!**/.taste-allow.example'

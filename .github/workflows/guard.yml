@@ -39,24 +39,15 @@ jobs:
       - name: Taste guard
         run: bash .design-guard/taste-guard.sh
 
-      # Report only. hashFiles is empty until vendor/impeccable-detector/ exists,
-      # so this step stays skipped. Findings must not fail the job.
+      - name: Set up Node
+        if: hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Report only. Skipped when the vendored detector is absent.
+      # Findings are written to the job summary and do not fail the job.
       - name: Impeccable detector (report only)
         if: hashFiles('.design-guard/vendor/impeccable-detector/**') != ''
         continue-on-error: true
-        run: |
-          set +e
-          vendor="${GITHUB_WORKSPACE}/.design-guard/vendor/impeccable-detector"
-          if [[ -f "${vendor}/detect.mjs" ]]; then
-            node "${vendor}/detect.mjs" .
-          elif [[ -f "${vendor}/cli/main.mjs" ]]; then
-            DETECTOR_ENTRY="${vendor}/cli/main.mjs" node --input-type=module -e 'import { pathToFileURL } from "node:url"; const mod = await import(pathToFileURL(process.env.DETECTOR_ENTRY)); await mod.detectCli();'
-          else
-            echo "::warning title=Impeccable detector::Vendored files have no detect.mjs or cli/main.mjs entry point."
-            exit 0
-          fi
-          status=$?
-          if [[ "${status}" -ne 0 ]]; then
-            echo "::warning title=Impeccable detector::Report-only scan exited ${status}. This does not fail the job."
-          fi
-          exit 0
+        run: node .design-guard/scripts/impeccable-report.mjs "$GITHUB_WORKSPACE"

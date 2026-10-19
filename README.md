@@ -33,7 +33,7 @@ This repo is private. The workflow checks out the caller, checks out design-guar
 
 Hits are GitHub annotations: `::error file=path,line=N::`.
 
-It skips docs (`*.md`, `*.mdx`, `docs/`), lockfiles, `node_modules`, build output (`dist`, `build`, `.next`, and the usual caches), OFL license texts, and agent folders (`.claude`, `.agents`, `.cursor`, `skills/`).
+It skips docs (`*.md`, `*.mdx`, `docs/`), lockfiles, `node_modules`, `vendor/`, build output (`dist`, `build`, `.next`, and the usual caches), OFL license texts, and agent folders (`.claude`, `.agents`, `.cursor`, `skills/`).
 
 `Interval`, `Interface`, and `internal` do not match. `InterVariable` and `GeistMono` do.
 
@@ -58,9 +58,9 @@ Inside a repo that does run the check, put a `.taste-allow` file at the repo roo
 
 ## Impeccable
 
-After the taste check, the workflow runs the Impeccable detector in report-only mode. A finding does not fail the job. Do not install the detector as a user-level hook.
+After the taste check, the workflow runs the vendored detector in report-only mode. Findings go to the job summary. They do not fail the job. Do not install the detector as a user-level hook.
 
-**TODO:** Vendor the detector from the private repo `cococool13/claude-config` at `skills/impeccable/scripts/detector` into `vendor/impeccable-detector/`, and include its license. This copy could not read that repo, so the directory is not here. The workflow step is behind `if: hashFiles('.design-guard/vendor/impeccable-detector/**')` and does not run until those files exist. The entry it will call is `detect.mjs`, or `cli/main.mjs` (`detectCli`).
+The entry point is `vendor/impeccable-detector/detect-antipatterns.mjs` (`--json`). It scans the caller's source files and skips `vendor/`, `.design-guard`, and `node_modules`. `cli/main.mjs` imports `vendor/lib/impeccable-config.mjs` (Apache-2.0, same skill). The step uses `actions/setup-node` and does not install packages. Puppeteer is not used; URL scans are not run.
 
 ## Local run
 

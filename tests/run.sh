@@ -136,6 +136,73 @@ else
   bad "invalid pattern expected exit 2" "$out"
 fi
 
+# vendor/ names the banned fonts inside the detector. Those files must not fail the guard.
+vend=$(mktemp -d)
+mkdir -p "$vend/vendor/impeccable-detector" "$vend/src"
+printf 'body { font-family: "Inter", sans-serif; }\nimport "lucide-react";\n' > "$vend/vendor/impeccable-detector/rules.js"
+printf 'body { font-family: Switzer, sans-serif; }\n' > "$vend/src/ok.css"
+expect_pass "vendor directory ignored" "$vend"
+printf 'body { font-family: "Geist", sans-serif; }\n' > "$vend/src/bad.css"
+expect_fail "vendor ignore still scans source" "$vend" "src/bad.css" "vendor/"
+rm -rf "$vend"
+
+set +e
+out=$(bash "$guard" . 2>&1)
+status=$?
+set -e
+if grep -q 'vendor/impeccable-detector' <<<"$out"; then
+  bad "real detector tree tripped taste-guard" "$out"
+else
+  ok "real detector tree ignored"
+fi
+
+# Detector report: findings are printed, and the wrapper still exits 0.
+summary=$(mktemp)
+set +e
+GITHUB_STEP_SUMMARY="$summary" node scripts/impeccable-report.mjs "$fixtures/detector-hit" >"$summary.out" 2>"$summary.err"
+status=$?
+set -e
+if [[ "$status" -ne 0 ]]; then
+  bad "detector report expected exit 0, got $status" "$(cat "$summary" "$summary.out" "$summary.err")"
+elif ! grep -q 'overused-font' "$summary"; then
+  bad "detector report did not find overused-font" "$(cat "$summary" "$summary.err")"
+elif ! grep -q 'does not fail the job' "$summary"; then
+  bad "detector report missing job-summary note" "$(cat "$summary")"
+else
+  ok "detector report-only"
+fi
+rm -f "$summary" "$summary.out" "$summary.err"
+
+# A repo-shaped tree skips vendor/ and still reports source.
+repo=$(mktemp -d)
+mkdir -p "$repo/.git" "$repo/vendor" "$repo/src"
+cat > "$repo/vendor/bad.html" << 'EOF'
+<!DOCTYPE html><style>body { font-family: Inter, sans-serif; }</style>
+EOF
+cat > "$repo/README.md" << 'EOF'
+body { font-family: Inter, sans-serif; }
+EOF
+cat > "$repo/src/hit.html" << 'EOF'
+<!DOCTYPE html><style>body { font-family: Inter, sans-serif; }</style>
+EOF
+summary=$(mktemp)
+set +e
+GITHUB_STEP_SUMMARY="$summary" node scripts/impeccable-report.mjs "$repo" >/dev/null
+status=$?
+set -e
+if [[ "$status" -ne 0 ]]; then
+  bad "detector on repo expected exit 0, got $status" "$(cat "$summary")"
+elif grep -q 'vendor/bad.html' "$summary"; then
+  bad "detector scanned vendor/" "$(cat "$summary")"
+elif grep -q 'README.md' "$summary"; then
+  bad "detector scanned README.md" "$(cat "$summary")"
+elif ! grep -q 'src/hit.html' "$summary"; then
+  bad "detector missed caller source" "$(cat "$summary")"
+else
+  ok "detector scans source not vendor"
+fi
+rm -rf "$repo" "$summary"
+
 # Missing directory is a tool error, not a taste failure.
 set +e
 out=$(bash "$guard" "$fixtures/does-not-exist" 2>&1)
