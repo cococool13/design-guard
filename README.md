@@ -26,6 +26,7 @@ This repo is public, so callers need no token. The workflow checks out its own c
 - CSS, SCSS, and Tailwind `font-family` and `--font` values
 - SwiftUI `.custom("Inter...")` or `.custom("Geist...")`
 - bundled font files named `Inter*` or `Geist*` (`InterVariable.woff2`, `GeistMono-Regular.otf`)
+- DRAFT: Instrument Serif paired with negative `letter-spacing` / `tracking-tighter` (design-slop tell; Prompt Engineer will polish)
 
 Hits are GitHub annotations: `::error file=path,line=N::`.
 

@@ -369,6 +369,35 @@ search "$MSG_MANIFEST" "(?:${FONT})" --glob 'package.json' --glob 'Package.swift
 search "$MSG_FONT" "['\"](?:${FONT})\\b|(?:^|[^A-Za-z0-9_])(?:${FONT_NAME}),"
 check_font_files
 
+# DRAFT design-slop: Instrument Serif + negative letter-spacing/tracking (ayushsoni_io).
+# Fail a file only when both signals appear in that file.
+check_instrument_serif_kern() {
+  local file
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    path_skipped "$file" && continue
+    if ! rg -q -e 'Instrument[[:space:]]*Serif|instrument[_-]?serif|font-\[[^]]*Instrument' "$file" 2>/dev/null; then
+      continue
+    fi
+    if ! rg -q -e 'letter-spacing[[:space:]]*:[[:space:]]*-|tracking-tighter|tracking-\[[-]' "$file" 2>/dev/null; then
+      continue
+    fi
+    local lineno
+    lineno=$(rg -n -e 'Instrument[[:space:]]*Serif|instrument[_-]?serif|font-\[[^]]*Instrument' "$file" 2>/dev/null | head -1 | cut -d: -f1)
+    [[ "$lineno" =~ ^[0-9]+$ ]] || lineno=1
+    key="${file#./}:$lineno"
+    if grep -Fxq "$key" "$SEEN"; then
+      continue
+    fi
+    printf '%s\n' "$key" >> "$SEEN"
+    emit "${file#./}" "$lineno" "DRAFT: Instrument Serif with negative kerning/tracking is banned design-slop."
+  done < <(rg --files --hidden --no-ignore --no-ignore-vcs --color never "${RG_GLOBS[@]}" \
+    --glob '*.css' --glob '*.scss' --glob '*.sass' --glob '*.less' --glob '*.pcss' \
+    --glob '*.vue' --glob '*.svelte' --glob '*.astro' --glob '*.html' --glob '*.htm' \
+    --glob '*.ts' --glob '*.tsx' --glob '*.js' --glob '*.jsx' --glob '*.mjs' --glob '*.cjs' . || true)
+}
+check_instrument_serif_kern
+
 if [[ "$FAIL" -ne 0 ]]; then
   printf 'taste-guard: %s banned hit(s)\n' "$HITS" >&2
   exit 1
