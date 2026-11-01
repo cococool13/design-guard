@@ -369,7 +369,7 @@ search "$MSG_MANIFEST" "(?:${FONT})" --glob 'package.json' --glob 'Package.swift
 search "$MSG_FONT" "['\"](?:${FONT})\\b|(?:^|[^A-Za-z0-9_])(?:${FONT_NAME}),"
 check_font_files
 
-# DRAFT design-slop: Instrument Serif + negative letter-spacing/tracking (ayushsoni_io).
+# Design-slop: Instrument Serif as a tightly tracked hero face (ayushsoni_io).
 # Fail a file only when both signals appear in that file.
 check_instrument_serif_kern() {
   local file
@@ -390,7 +390,7 @@ check_instrument_serif_kern() {
       continue
     fi
     printf '%s\n' "$key" >> "$SEEN"
-    emit "${file#./}" "$lineno" "DRAFT: Instrument Serif with negative kerning/tracking is banned design-slop."
+    emit "${file#./}" "$lineno" "Don't use it as a tightly tracked hero face."
   done < <(rg --files --hidden --no-ignore --no-ignore-vcs --color never "${RG_GLOBS[@]}" \
     --glob '*.css' --glob '*.scss' --glob '*.sass' --glob '*.less' --glob '*.pcss' \
     --glob '*.vue' --glob '*.svelte' --glob '*.astro' --glob '*.html' --glob '*.htm' \
