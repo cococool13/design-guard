@@ -1,0 +1,15 @@
+#!/bin/sh
+# Blocks a push on a secret in the outgoing commits or a failing repo check.
+# Activate once per clone: git config core.hooksPath .githooks
+set -eu
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha _ remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" = "$zero" ] || ! git cat-file -e "$remote_sha" 2>/dev/null; then
+    range="$local_sha --not --remotes"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+  gitleaks git --no-banner --redact --log-opts="$range" </dev/null
+done
+exec sh scripts/pre-push-checks.sh
