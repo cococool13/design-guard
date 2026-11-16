@@ -31,7 +31,11 @@ test:
 
 # Full history, with the repo's .gitleaks.toml when there is one.
 gitleaks:
-    gitleaks git --no-banner --redact .
+    .ci/bin/ci-gitleaks
 
 ci-drift:
     .ci/bin/ci-sync --check .
+
+# Whole history (nightly).
+gitleaks-full:
+    .ci/bin/ci-gitleaks --full
