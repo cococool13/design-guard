@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// ci-test <vitest|node|bun> [--dir pkg] [--full] [--shards N] [--files <glob>]... [-- runner args...]
+// ci-test <vitest|node|bun> [--dir pkg] [--full] [--shards N] [--files <glob>]... [--exclude <glob>]... [-- runner args...]
 //
 // Runs a repo's unit tests the fast way:
 // 1. Diff-only on PRs. When CI_BASE is set (ci-check sets it for any commit not
@@ -16,6 +16,7 @@
 //    splitting it into several processes measured slower (8.6s vs 16.0s).
 // --dir runs from a package subdirectory (worker/, server/): its node_modules,
 // its config; --files globs are relative to it.
+// --exclude drops files from that list (globs relative to --dir).
 // --files defaults to every tracked JS/TS *.test.* / *.spec.* outside e2e/ and node_modules.
 // Runner args after `--` go to every shard (e.g. -- --import tsx).
 import { $ } from "bun";
@@ -27,19 +28,21 @@ import { dirname, extname, join, resolve } from "node:path";
 const argv = process.argv.slice(2);
 const runner = argv.shift();
 if (!runner || !["vitest", "node", "bun"].includes(runner)) {
-  console.error("usage: ci-test <vitest|node|bun> [--shards N] [--files glob]... [-- args]");
+  console.error("usage: ci-test <vitest|node|bun> [--dir pkg] [--full] [--shards N] [--files glob]... [--exclude glob]... [-- args]");
   process.exit(2);
 }
 let shardsWanted = 0;
 let dir = ".";
 let full = false;
 const globs: string[] = [];
+const excludes: string[] = [];
 let extra: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === "--shards") shardsWanted = Number(argv[++i]);
   else if (argv[i] === "--dir") dir = argv[++i];
   else if (argv[i] === "--full") full = true;
   else if (argv[i] === "--files") globs.push(argv[++i]);
+  else if (argv[i] === "--exclude") excludes.push(argv[++i]);
   else if (argv[i] === "--") { extra = argv.slice(i + 1); break; }
   else { console.error(`ci-test: unknown option ${argv[i]}`); process.exit(2); }
 }
@@ -51,6 +54,7 @@ const pathspecs = globs.length ? globs.map((g) => `:(glob)${g}`) : [
   ":(glob)**/*.test.*", ":(glob)**/*.spec.*",
   ":(exclude,glob)**/e2e/**", ":(exclude,glob)**/node_modules/**",
 ];
+for (const g of excludes) pathspecs.push(`:(exclude,glob)${g}`);
 const testExt = /\.(test|spec)\.[cm]?[jt]sx?$/; // the default list skips *.test.sh and the like
 let files = (await $`git ls-files -- ${pathspecs}`.text()).split("\n")
   .filter((f) => f && existsSync(f) && (globs.length > 0 || testExt.test(f)));
