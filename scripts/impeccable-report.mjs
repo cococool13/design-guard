@@ -3,9 +3,8 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const scriptDir = import.meta.dirname;
 const detector = path.join(scriptDir, '..', 'vendor', 'impeccable-detector', 'detect-antipatterns.mjs');
 const skipNames = new Set(['.design-guard', '.git', 'vendor', 'node_modules']);
 const hiddenSource = new Set(['.storybook', '.vitepress', '.vuepress']);
@@ -48,8 +47,8 @@ function sourceTargets(root) {
 
 function cell(value) {
   return String(value ?? '')
-    .replace(/\s+/g, ' ')
-    .replace(/\|/g, '\\|')
+    .replaceAll(/\s+/g, ' ')
+    .replaceAll('|', String.raw`\|`)
     .slice(0, 160);
 }
 
