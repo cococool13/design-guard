@@ -3,8 +3,9 @@
 # GitHub Actions still run here too (public repo): test.yml runs the same self-test.
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-check:
-    .ci/bin/ci-par test gitleaks
+# Everything, in parallel.
+check: setup
+    .ci/bin/ci-par test oxlint gitleaks
 
 # Changed files since origin/main plus uncommitted work. The fixture suite
 # (~15 s) runs only when the guard, its fixtures, configs or workflows changed.
@@ -23,11 +24,20 @@ check-fast:
 
 # No formatter is configured.
 fix:
-    @echo "fix: no autofixers in this repo"
+    .ci/bin/ci-oxlint --update
+
+# Root package.json holds dev tools only (oxlint); the guard needs no install.
+setup:
+    [ node_modules/.package-lock.json -nt package-lock.json ] || npm ci --no-audit --no-fund
 
 # From test.yml (taste-guard self-test). Needs ripgrep.
 test:
     bash tests/run.sh
+
+# Every oxlint rule (type-aware) on scripts/ and configs/ (not the fixtures or vendor/);
+# hits from before are in .oxlint-baseline.json and may only go down.
+oxlint:
+    .ci/bin/ci-oxlint
 
 # Full history, with the repo's .gitleaks.toml when there is one.
 gitleaks:
