@@ -1,0 +1,16 @@
+{
+ "configs/eslint.banned.js::import(no-anonymous-default-export)": 1,
+ "configs/eslint.banned.js::import(no-default-export)": 1,
+ "scripts/impeccable-report.mjs::eslint(curly)": 6,
+ "scripts/impeccable-report.mjs::eslint(require-unicode-regexp)": 1,
+ "scripts/impeccable-report.mjs::typescript(no-confusing-void-expression)": 1,
+ "scripts/impeccable-report.mjs::typescript(no-unsafe-argument)": 5,
+ "scripts/impeccable-report.mjs::typescript(no-unsafe-assignment)": 20,
+ "scripts/impeccable-report.mjs::typescript(no-unsafe-call)": 37,
+ "scripts/impeccable-report.mjs::typescript(no-unsafe-member-access)": 52,
+ "scripts/impeccable-report.mjs::typescript(no-unsafe-return)": 6,
+ "scripts/impeccable-report.mjs::typescript(prefer-nullish-coalescing)": 6,
+ "scripts/impeccable-report.mjs::typescript(promise-function-async)": 1,
+ "scripts/impeccable-report.mjs::typescript(strict-boolean-expressions)": 17,
+ "scripts/impeccable-report.mjs::unicorn(no-process-exit)": 3
+}
