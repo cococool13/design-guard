@@ -1,0 +1,7 @@
+// Every oxlint rule on, per the shared policy in .ci/oxlint/base.jsonc.
+{
+  "extends": [".ci/oxlint/base.jsonc"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node", "jsdoc"],
+  // tests/fixtures: deliberately bad sample projects the guard must catch. vendor: the vendored Impeccable detector.
+  "ignorePatterns": ["tests/fixtures/**", "vendor/**"]
+}
