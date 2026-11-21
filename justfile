@@ -1,6 +1,6 @@
 # CI contract. Agents, the pre-push hook and `ship` all run `just check`.
 # Kit: .ci/ (vendored with ci-sync; `just ci-drift` shows drift).
-# GitHub Actions still run here too (public repo): test.yml runs the same self-test.
+# No GitHub Actions: checks run only on this Mac.
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 # Everything, in parallel.
@@ -8,7 +8,7 @@ check: setup
     .ci/bin/ci-par test oxlint gitleaks
 
 # Changed files since origin/main plus uncommitted work. The fixture suite
-# (~15 s) runs only when the guard, its fixtures, configs or workflows changed.
+# (~15 s) runs only when the guard, its fixtures, configs or scripts changed.
 check-fast:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -16,7 +16,7 @@ check-fast:
     mapfile -t files < <({ git diff --name-only --diff-filter=d "$base"; git ls-files --others --exclude-standard; } | sort -u)
     if [ "${#files[@]}" -eq 0 ]; then echo "check-fast: no changes"; exit 0; fi
     bash -n taste-guard.sh
-    if printf '%s\n' "${files[@]}" | grep -qE '^(taste-guard\.sh|tests/|configs/|scripts/|templates/|vendor/|\.github/)'; then
+    if printf '%s\n' "${files[@]}" | grep -qE '^(taste-guard\.sh|tests/|configs/|scripts/|vendor/)'; then
       bash tests/run.sh
     else
       echo "check-fast: guard and fixtures unchanged"
@@ -30,7 +30,7 @@ fix:
 setup:
     [ node_modules/.package-lock.json -nt package-lock.json ] || npm ci --no-audit --no-fund
 
-# From test.yml (taste-guard self-test). Needs ripgrep.
+# taste-guard self-test. Needs ripgrep.
 test:
     bash tests/run.sh
 
