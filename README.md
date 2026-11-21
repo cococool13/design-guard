@@ -1,6 +1,6 @@
 # design-guard
 
-CI check that fails when shipped code uses Lucide, Inter, or Geist.
+A check that fails when shipped code uses Lucide, Inter, or Geist. Repos run it locally through `just check`, which calls `.ci/bin/ci-taste v1`.
 
 Use Phosphor on the web and SF Symbols in Swift. SF Symbols stay on Apple platforms. For type, use a Fontshare face (or SF Pro and SF Mono on Apple), not Inter or Geist.
 
@@ -42,7 +42,7 @@ Those files name the banned packages, so add them to `.taste-allow` if you commi
 
 ## Exceptions
 
-Do not add this workflow to **jcc-*** client repos. Those brands are exempt.
+Never add this check to **jcc-*** client repos. Those brands are exempt.
 
 Inside a repo that does run the check, put a `.taste-allow` file at the repo root. See `.taste-allow.example`.
 
@@ -51,9 +51,9 @@ Inside a repo that does run the check, put a `.taste-allow` file at the repo roo
 
 ## Impeccable
 
-After the taste check, the workflow runs the vendored detector in report-only mode when the design-guard checkout succeeded. A cancelled job or a failed checkout skips the report. A taste failure still publishes it. Findings go to the job summary. They do not fail the job. Do not install the detector as a user-level hook.
+The vendored detector runs in report-only mode. Run it locally from the design-guard repo with `node scripts/impeccable-report.mjs <dir>`. It prints a markdown report. Findings never fail a check. `just check` in other repos doesn't run it. Don't install the detector as a user-level hook.
 
-The entry point is `vendor/impeccable-detector/detect-antipatterns.mjs` (`--json`). It scans the caller's source files and skips `vendor/`, `.design-guard`, and `node_modules`. `cli/main.mjs` imports `vendor/lib/impeccable-config.mjs` (Apache-2.0, same skill). The step uses `actions/setup-node` and does not install packages. Puppeteer is not used; URL scans are not run.
+The entry point is `vendor/impeccable-detector/detect-antipatterns.mjs` (`--json`). It scans source files and skips `vendor/`, `.design-guard`, and `node_modules`. `cli/main.mjs` imports `vendor/lib/impeccable-config.mjs` (Apache-2.0, same skill). It installs no packages. It doesn't use Puppeteer or run URL scans.
 
 ## Local run
 
