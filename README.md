@@ -6,16 +6,14 @@ Use Phosphor on the web and SF Symbols in Swift. SF Symbols stay on Apple platfo
 
 ## Wire it in
 
-Copy `templates/taste.yml` to `.github/workflows/taste.yml`.
+The check runs locally, through `just check`. In a repo with the shared CI kit (`.ci/`), add a `taste` recipe to the `justfile` and list it in `check`:
 
-```yaml
-uses: cococool13/design-guard/.github/workflows/guard.yml@v1
-secrets: inherit
+```just
+taste:
+    .ci/bin/ci-taste v1
 ```
 
-Callers pin `@v1`.
-
-This repo is public, so callers need no token. The workflow checks out its own code with the caller's `github.token`. `secrets: inherit` is harmless and can stay. `DESIGN_GUARD_READ_TOKEN` is optional: if a caller sets it, the workflow uses it for that checkout instead.
+`ci-taste` exports the `v1` tag of this repo (from `~/Projects/Design Guard`, or `$DESIGN_GUARD`) and runs `taste-guard.sh` on the files git would commit. Callers pin `v1`, so a merge here reaches them only when that tag moves.
 
 ## What it scans
 
